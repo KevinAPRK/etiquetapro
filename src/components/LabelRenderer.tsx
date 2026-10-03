@@ -47,6 +47,8 @@ export const LabelRenderer: React.FC<LabelRendererProps> = ({
           product={product}
           config={config}
           scale={scale}
+          templateWidthMm={template.widthMm}
+          templateHeightMm={template.heightMm}
           isSelected={selectedElementId === el.id}
           onSelect={onSelectElement ? () => onSelectElement(el.id) : undefined}
           isInteractive={isInteractive}
@@ -62,6 +64,8 @@ interface ElementItemProps {
   product?: Product;
   config: AppConfig;
   scale: number;
+  templateWidthMm: number;
+  templateHeightMm: number;
   isSelected?: boolean;
   onSelect?: () => void;
   isInteractive?: boolean;
@@ -73,6 +77,8 @@ const ElementItem: React.FC<ElementItemProps> = ({
   product,
   config,
   scale,
+  templateWidthMm,
+  templateHeightMm,
   isSelected,
   onSelect,
   isInteractive,
@@ -180,6 +186,11 @@ const ElementItem: React.FC<ElementItemProps> = ({
     window.addEventListener('mouseup', handleMouseUp);
   };
 
+  const leftPercent = templateWidthMm > 0 ? (element.x / templateWidthMm) * 100 : 0;
+  const topPercent = templateHeightMm > 0 ? (element.y / templateHeightMm) * 100 : 0;
+  const widthPercent = templateWidthMm > 0 ? (element.width / templateWidthMm) * 100 : 0;
+  const heightPercent = templateHeightMm > 0 ? (element.height / templateHeightMm) * 100 : 0;
+
   const leftPx = element.x * scale;
   const topPx = element.y * scale;
   const widthPx = element.width * scale;
@@ -197,13 +208,15 @@ const ElementItem: React.FC<ElementItemProps> = ({
       onMouseDown={handleMouseDown}
       style={{
         position: 'absolute',
-        left: `${leftPx}px`,
-        top: `${topPx}px`,
-        width: `${widthPx}px`,
-        height: `${heightPx}px`,
+        left: isInteractive ? `${leftPx}px` : `${leftPercent}%`,
+        top: isInteractive ? `${topPx}px` : `${topPercent}%`,
+        width: isInteractive ? `${widthPx}px` : `${widthPercent}%`,
+        height: isInteractive ? `${heightPx}px` : `${heightPercent}%`,
         cursor: isInteractive ? 'move' : 'default',
         transform: element.rotation ? `rotate(${element.rotation}deg)` : undefined,
         transformOrigin: 'center center',
+        boxSizing: 'border-box',
+        overflow: 'hidden',
       }}
       className={`flex items-center box-border transition-shadow ${
         isInteractive && isSelected ? 'outline-2 outline-indigo-600 outline-offset-1 z-30' : ''
@@ -240,16 +253,35 @@ const ElementItem: React.FC<ElementItemProps> = ({
 
       {/* BARCODE */}
       {element.type === 'barcode' && (
-        <div className="w-full h-full flex flex-col items-center justify-center overflow-hidden">
-          <canvas ref={barcodeCanvasRef} className="max-w-full max-h-full object-contain" />
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+          <canvas
+            ref={barcodeCanvasRef}
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain',
+              display: 'block',
+            }}
+          />
         </div>
       )}
 
       {/* QR CODE */}
       {element.type === 'qrcode' && (
-        <div className="w-full h-full flex items-center justify-center p-0.5">
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1px', overflow: 'hidden' }}>
           {qrUrl ? (
-            <img src={qrUrl} alt="QR Code" className="w-full h-full object-contain" />
+            <img
+              src={qrUrl}
+              alt="QR Code"
+              style={{
+                width: '100%',
+                height: '100%',
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain',
+                display: 'block',
+              }}
+            />
           ) : (
             <div className="text-[9px] text-gray-400">QR</div>
           )}
@@ -276,17 +308,40 @@ const ElementItem: React.FC<ElementItemProps> = ({
             backgroundColor: element.backgroundColor || 'transparent',
             border: `${element.borderWidth || 1}px solid ${element.borderColor || element.color || '#000000'}`,
             borderRadius: '2px',
+            boxSizing: 'border-box',
           }}
         />
       )}
 
       {/* IMAGE / LOGO */}
       {element.type === 'image' && (
-        <div className="w-full h-full flex items-center justify-center overflow-hidden">
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
           {element.content && element.content.startsWith('data:image') ? (
-            <img src={element.content} alt="Logo" className="w-full h-full object-contain" />
+            <img
+              src={element.content}
+              alt="Logo"
+              style={{
+                width: '100%',
+                height: '100%',
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain',
+                display: 'block',
+              }}
+            />
           ) : config.businessLogo ? (
-            <img src={config.businessLogo} alt="Logo Empresa" className="w-full h-full object-contain" />
+            <img
+              src={config.businessLogo}
+              alt="Logo Empresa"
+              style={{
+                width: '100%',
+                height: '100%',
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain',
+                display: 'block',
+              }}
+            />
           ) : (
             <div className="text-[10px] text-gray-500 border border-dashed border-gray-400 w-full h-full flex items-center justify-center bg-gray-50">
               Logo / Imagen

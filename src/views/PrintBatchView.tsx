@@ -155,13 +155,8 @@ export const PrintBatchView: React.FC<PrintBatchViewProps> = ({
               overflow: hidden;
               position: relative;
               ${showCutGuides ? 'border: 0.5px dashed #cbd5e1;' : ''}
-              display: flex;
-              align-items: center;
-              justify-content: center;
             ">
-              <div style="width: ${labelW}mm; height: ${labelH}mm; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-                ${allLabels[currentIndex + l]}
-              </div>
+              ${allLabels[currentIndex + l]}
             </div>
           `;
         }
@@ -203,6 +198,8 @@ export const PrintBatchView: React.FC<PrintBatchViewProps> = ({
             }
             * {
               box-sizing: border-box;
+              margin: 0;
+              padding: 0;
             }
             body {
               margin: 0;
@@ -212,19 +209,42 @@ export const PrintBatchView: React.FC<PrintBatchViewProps> = ({
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
             }
-            .label-box {
-              box-shadow: none !important;
-              border: none !important;
-              width: ${selectedTemplate.widthMm}mm !important;
-              height: ${selectedTemplate.heightMm}mm !important;
-            }
             .sheet-page {
               page-break-inside: avoid;
               break-inside: avoid;
             }
             .sheet-label-item {
+              width: ${labelW}mm !important;
+              height: ${labelH}mm !important;
               page-break-inside: avoid;
               break-inside: avoid;
+              overflow: hidden;
+              position: relative;
+              box-sizing: border-box;
+            }
+            .sheet-label-item > .label-box,
+            .thermal-label-page > .label-box {
+              width: 100% !important;
+              height: 100% !important;
+              position: relative !important;
+              overflow: hidden !important;
+              box-shadow: none !important;
+              border: none !important;
+              background-color: #fff !important;
+            }
+            img {
+              width: 100% !important;
+              height: 100% !important;
+              max-width: 100% !important;
+              max-height: 100% !important;
+              object-fit: contain !important;
+              display: block !important;
+            }
+            canvas {
+              max-width: 100% !important;
+              max-height: 100% !important;
+              object-fit: contain !important;
+              display: block !important;
             }
           </style>
         </head>
@@ -232,9 +252,30 @@ export const PrintBatchView: React.FC<PrintBatchViewProps> = ({
           ${contentHtml}
           <script>
             window.onload = function() {
-              window.focus();
-              window.print();
-              setTimeout(function() { window.close(); }, 700);
+              var imgs = Array.from(document.images);
+              if (imgs.length === 0) {
+                window.focus();
+                window.print();
+                setTimeout(function() { window.close(); }, 700);
+                return;
+              }
+              var pending = imgs.length;
+              function onOneDone() {
+                pending--;
+                if (pending <= 0) {
+                  window.focus();
+                  window.print();
+                  setTimeout(function() { window.close(); }, 700);
+                }
+              }
+              imgs.forEach(function(img) {
+                if (img.complete) {
+                  onOneDone();
+                } else {
+                  img.addEventListener('load', onOneDone);
+                  img.addEventListener('error', onOneDone);
+                }
+              });
             };
           </script>
         </body>
@@ -515,7 +556,7 @@ export const PrintBatchView: React.FC<PrintBatchViewProps> = ({
             </div>
 
             {/* Muestra de los elementos ocultos para renderizado de impresión */}
-            <div className="hidden">
+            <div style={{ position: 'fixed', left: '-9999px', top: '-9999px', visibility: 'visible', pointerEvents: 'none', zIndex: -1 }}>
               {batchItems.map((item) => {
                 const p = products.find((prod) => prod.id === item.productId);
                 if (!p) return null;
