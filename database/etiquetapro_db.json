@@ -1,82 +1,137 @@
 {
-  "products": [
-    {
-      "id": "P005",
-      "code": "7750000001646",
-      "name": "babar",
-      "category": "General",
-      "brand": "Genérica",
-      "costPrice": 10,
-      "salePrice": 20,
-      "wholesalePrice": 16,
-      "wholesaleMinQty": 6,
-      "stock": 50,
-      "description": "",
-      "createdAt": "2026-10-03T00:36:41.166Z",
-      "updatedAt": "2026-10-03T00:36:41.166Z"
-    },
-    {
-      "id": "P001",
-      "code": "775123456789",
-      "name": "Audífonos Bluetooth Pro TWS",
-      "category": "Tecnología",
-      "brand": "SoundWave",
-      "costPrice": 28,
-      "salePrice": 49.9,
-      "wholesalePrice": 42,
-      "wholesaleMinQty": 6,
-      "stock": 45,
-      "description": "Cancelación de ruido, estuche de carga 300mAh, bluetooth 5.3",
-      "createdAt": "2026-10-02T22:22:13.939Z",
-      "updatedAt": "2026-10-02T22:22:13.940Z"
-    },
-    {
-      "id": "P002",
-      "code": "775987654321",
-      "name": "Cable USB-C Carga Rápida 65W",
-      "category": "Accesorios",
-      "brand": "PowerLink",
-      "costPrice": 6.5,
-      "salePrice": 19.9,
-      "wholesalePrice": 14.5,
-      "wholesaleMinQty": 12,
-      "stock": 120,
-      "description": "Cable reforzado trenzado 1.5m con chip E-marker",
-      "createdAt": "2026-10-02T22:22:13.940Z",
-      "updatedAt": "2026-10-02T22:22:13.940Z"
-    },
-    {
-      "id": "P003",
-      "code": "775456789123",
-      "name": "Botella Térmica Inox 750ml",
-      "category": "Hogar & Bazar",
-      "brand": "HydroCool",
-      "costPrice": 15,
-      "salePrice": 35,
-      "wholesalePrice": 28,
-      "wholesaleMinQty": 10,
-      "stock": 28,
-      "description": "Mantiene frío 24h y caliente 12h, libre de BPA",
-      "createdAt": "2026-10-02T22:22:13.940Z",
-      "updatedAt": "2026-10-02T22:22:13.940Z"
-    },
-    {
-      "id": "P004",
-      "code": "775321654987",
-      "name": "Polo Algodón Pima Cuello Redondo",
-      "category": "Textil & Moda",
-      "brand": "UrbanCotton",
-      "costPrice": 22,
-      "salePrice": 55,
-      "wholesalePrice": 45,
-      "wholesaleMinQty": 6,
-      "stock": 80,
-      "description": "100% Algodón Pima reactivo, acabado suave",
-      "createdAt": "2026-10-02T22:22:13.940Z",
-      "updatedAt": "2026-10-02T22:22:13.940Z"
-    }
-  ],
+  "products": [],
   "templates": [
+    {
+      "id": "tpl-micro-20x10-qr",
+      "name": "Micro QR + Código (20x10mm)",
+      "description": "Código QR lateral con nombre y precio al costado.",
+      "widthMm": 20,
+      "heightMm": 10,
+      "orientation": "landscape",
+      "category": "micro",
+      "isPreset": true,
+      "elements": [
+        {
+          "id": "el-mqr-1",
+          "type": "qrcode",
+          "x": 0.8,
+          "y": 1,
+          "width": 8,
+          "height": 8,
+          "content": "{{codigo}}"
+        },
+        {
+          "id": "el-mqr-2",
+          "type": "text",
+          "x": 9.5,
+          "y": 0.8,
+          "width": 10,
+          "height": 4.2,
+          "content": "{{nombre}}",
+          "fontSize": 5,
+          "fontWeight": "bold",
+          "textAlign": "left",
+          "color": "#000000"
+        },
+        {
+          "id": "el-mqr-3",
+          "type": "price",
+          "x": 9.5,
+          "y": 5.5,
+          "width": 10,
+          "height": 3.8,
+          "content": "{{precio}}",
+          "fontSize": 6,
+          "fontWeight": "bold",
+          "textAlign": "left",
+          "color": "#000000"
+        }
+      ]
+    },
+    {
+      "id": "tpl-micro-10x10",
+      "name": "Micro Cuadrada (10x10mm / 1x1cm)",
+      "description": "Etiqueta miniatura para anillos, aretes, códigos QR o chips.",
+      "widthMm": 10,
+      "heightMm": 10,
+      "orientation": "landscape",
+      "category": "micro",
+      "isPreset": true,
+      "elements": [
+        {
+          "id": "el-m10-1",
+          "type": "qrcode",
+          "x": 1,
+          "y": 0.8,
+          "width": 8,
+          "height": 6.5,
+          "content": "{{codigo}}"
+        },
+        {
+          "id": "el-m10-2",
+          "type": "price",
+          "x": 0.5,
+          "y": 7.5,
+          "width": 9,
+          "height": 2.2,
+          "content": "{{precio}}",
+          "fontSize": 5,
+          "fontWeight": "bold",
+          "textAlign": "center",
+          "color": "#000000"
+        }
+      ]
+    },
+    {
+      "id": "tpl-micro-20x10",
+      "name": "Micro Etiqueta (20x10mm / 2x1cm)",
+      "description": "Etiqueta compacta ultra pequeña para joyería, cables, componentes o cosméticos.",
+      "widthMm": 20,
+      "heightMm": 10,
+      "orientation": "landscape",
+      "category": "micro",
+      "isPreset": true,
+      "elements": [
+        {
+          "id": "el-micro-1",
+          "type": "text",
+          "x": 0.5,
+          "y": 0.5,
+          "width": 19,
+          "height": 3,
+          "content": "{{nombre}}",
+          "fontSize": 5,
+          "fontWeight": "bold",
+          "textAlign": "center",
+          "color": "#000000"
+        },
+        {
+          "id": "el-micro-2",
+          "type": "barcode",
+          "x": 1,
+          "y": 3.5,
+          "width": 18,
+          "height": 4,
+          "content": "{{codigo}}",
+          "barcodeFormat": "CODE128",
+          "showBarcodeValue": false,
+          "textAlign": "center"
+        },
+        {
+          "id": "el-micro-3",
+          "type": "price",
+          "x": 0.5,
+          "y": 7.5,
+          "width": 19,
+          "height": 2.2,
+          "content": "{{precio}}",
+          "fontSize": 6,
+          "fontWeight": "bold",
+          "textAlign": "center",
+          "color": "#000000"
+        }
+      ]
+    },
     {
       "id": "tpl-tienda-50x30",
       "name": "Tienda Minorista (50x30mm)",

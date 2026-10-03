@@ -19,7 +19,8 @@ import {
   RotateCcw,
   Sparkles,
   Download,
-  FolderOpen
+  FolderOpen,
+  ArrowRightLeft
 } from 'lucide-react';
 import { LabelTemplate, LabelElement, Product, AppConfig, ElementType } from '../types';
 import { LabelRenderer } from '../components/LabelRenderer';
@@ -275,6 +276,33 @@ export const DesignerView: React.FC<DesignerViewProps> = ({
     setSelectedElementId(duplicated.id);
   };
 
+  // Convertir Código de Barras en Código QR
+  const handleConvertBarcodeToQR = () => {
+    if (!selectedElement || selectedElement.type !== 'barcode') return;
+    const qrSize = Math.min(selectedElement.width, selectedElement.height, 16);
+    const converted: LabelElement = {
+      ...selectedElement,
+      type: 'qrcode',
+      width: Math.max(10, Math.min(qrSize > 5 ? qrSize : 15, template.widthMm - selectedElement.x)),
+      height: Math.max(10, Math.min(qrSize > 5 ? qrSize : 15, template.heightMm - selectedElement.y)),
+    };
+    handleUpdateSelected(converted);
+  };
+
+  // Convertir Código QR en Código de Barras
+  const handleConvertQRToBarcode = () => {
+    if (!selectedElement || selectedElement.type !== 'qrcode') return;
+    const converted: LabelElement = {
+      ...selectedElement,
+      type: 'barcode',
+      width: Math.min(Math.max(selectedElement.width * 1.8, 25), template.widthMm - selectedElement.x),
+      height: Math.max(8, Math.min(selectedElement.height, template.heightMm - selectedElement.y)),
+      barcodeFormat: 'CODE128',
+      showBarcodeValue: true,
+    };
+    handleUpdateSelected(converted);
+  };
+
   // Guardar plantilla
   const handleSave = () => {
     onSaveTemplate(template);
@@ -343,10 +371,10 @@ export const DesignerView: React.FC<DesignerViewProps> = ({
             <span>Ancho:</span>
             <input
               type="number"
-              min="15"
+              min="5"
               max="200"
               value={template.widthMm}
-              onChange={(e) => setTemplate({ ...template, widthMm: Number(e.target.value) || 50 })}
+              onChange={(e) => setTemplate({ ...template, widthMm: Number(e.target.value) || 20 })}
               className="w-14 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-center text-white font-bold"
             />
             <span className="text-[11px] text-slate-400">mm</span>
@@ -358,10 +386,10 @@ export const DesignerView: React.FC<DesignerViewProps> = ({
             <span>Alto:</span>
             <input
               type="number"
-              min="10"
+              min="5"
               max="200"
               value={template.heightMm}
-              onChange={(e) => setTemplate({ ...template, heightMm: Number(e.target.value) || 30 })}
+              onChange={(e) => setTemplate({ ...template, heightMm: Number(e.target.value) || 10 })}
               className="w-14 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-center text-white font-bold"
             />
             <span className="text-[11px] text-slate-400">mm</span>
@@ -537,6 +565,24 @@ export const DesignerView: React.FC<DesignerViewProps> = ({
                   Propiedades: {selectedElement.type.toUpperCase()}
                 </span>
                 <div className="flex items-center gap-1">
+                  {selectedElement.type === 'barcode' && (
+                    <button
+                      onClick={handleConvertBarcodeToQR}
+                      className="p-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white cursor-pointer flex items-center gap-1 text-[10px] font-semibold px-2"
+                      title="Convertir este código de barras a código QR"
+                    >
+                      <ArrowRightLeft size={12} /> Convertir a QR
+                    </button>
+                  )}
+                  {selectedElement.type === 'qrcode' && (
+                    <button
+                      onClick={handleConvertQRToBarcode}
+                      className="p-1.5 rounded-lg bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white cursor-pointer flex items-center gap-1 text-[10px] font-semibold px-2"
+                      title="Convertir este código QR a código de barras"
+                    >
+                      <ArrowRightLeft size={12} /> Convertir a Barras
+                    </button>
+                  )}
                   <button
                     onClick={handleDuplicateSelected}
                     className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white cursor-pointer"
@@ -742,6 +788,32 @@ export const DesignerView: React.FC<DesignerViewProps> = ({
                     />
                     Mostrar números abajo del código
                   </label>
+
+                  <button
+                    type="button"
+                    onClick={handleConvertBarcodeToQR}
+                    className="w-full mt-2 py-2 px-3 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/40 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <ArrowRightLeft size={14} />
+                    Convertir este Código a QR
+                  </button>
+                </div>
+              )}
+
+              {/* Opciones de Código QR */}
+              {selectedElement.type === 'qrcode' && (
+                <div className="space-y-2">
+                  <p className="text-[11px] text-slate-400">
+                    Genera un código QR 2D óptimo para escanear con cualquier celular o lector óptico.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleConvertQRToBarcode}
+                    className="w-full mt-2 py-2 px-3 rounded-lg bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/40 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <ArrowRightLeft size={14} />
+                    Convertir este QR a Código de Barras
+                  </button>
                 </div>
               )}
 

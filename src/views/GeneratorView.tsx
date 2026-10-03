@@ -53,12 +53,27 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
   const [rowsA4, setRowsA4] = useState<number>(8);
   const [marginMm, setMarginMm] = useState<number>(5);
 
-  const selectedProduct = products.find((p) => p.id === selectedProductId) || products[0];
+  const defaultSampleProduct: Product = {
+    id: 'sample-p',
+    code: '775012345678',
+    name: 'Producto de Prueba',
+    category: 'Muestra',
+    brand: 'Genérica',
+    costPrice: 10,
+    salePrice: 25.00,
+    wholesalePrice: 20.00,
+    wholesaleMinQty: 6,
+    stock: 50,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  const selectedProduct = products.find((p) => p.id === selectedProductId) || products[0] || defaultSampleProduct;
   const selectedTemplate = templates.find((t) => t.id === selectedTemplateId) || templates[0];
 
   // Imprimir directo con ventana de impresión del sistema
   const handleDirectPrint = () => {
-    if (!selectedProduct || !selectedTemplate) return;
+    if (!selectedTemplate) return;
 
     // Crear ventana oculta de impresión para no alterar el layout
     const printWindow = window.open('', '_blank', 'width=800,height=600');
@@ -256,11 +271,15 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
               onChange={(e) => setSelectedProductId(e.target.value)}
               className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white focus:border-indigo-500 font-medium"
             >
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.code} - {p.name} ({config.currency} {p.salePrice.toFixed(2)})
-                </option>
-              ))}
+              {products.length === 0 ? (
+                <option value="">(Sin productos registrados - Modo muestra)</option>
+              ) : (
+                products.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.code} - {p.name} ({config.currency} {p.salePrice.toFixed(2)})
+                  </option>
+                ))
+              )}
             </select>
 
             {/* Ficha resumida del producto */}
@@ -280,6 +299,11 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
                     Mayor: {config.currency} {selectedProduct.wholesalePrice.toFixed(2)}
                   </div>
                 </div>
+              </div>
+            )}
+            {products.length === 0 && (
+              <div className="mt-3 p-3 rounded-xl bg-indigo-950/40 border border-indigo-800/40 text-xs text-indigo-300">
+                ℹ️ Catálogo vacío: Viendo etiqueta con datos de muestra. Agrega productos en la pestaña <strong>Productos</strong> cuando lo desees.
               </div>
             )}
           </div>

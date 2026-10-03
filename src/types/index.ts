@@ -48,7 +48,7 @@ export interface LabelTemplate {
   orientation: 'landscape' | 'portrait';
   elements: LabelElement[];
   isPreset?: boolean;
-  category?: 'tienda' | 'mayorista' | 'joyeria' | 'farmacia' | 'ropa' | 'logistica' | 'personalizado';
+  category?: 'tienda' | 'mayorista' | 'joyeria' | 'farmacia' | 'ropa' | 'logistica' | 'personalizado' | 'micro' | 'mini';
   createdAt?: string;
   updatedAt?: string;
 }

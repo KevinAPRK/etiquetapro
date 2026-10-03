@@ -218,7 +218,12 @@ export const PrintBatchView: React.FC<PrintBatchViewProps> = ({
             </div>
 
             <div className="max-h-80 overflow-y-auto divide-y divide-slate-800">
-              {filteredProducts.map((p) => {
+              {filteredProducts.length === 0 ? (
+                <div className="py-8 text-center text-slate-500 text-xs">
+                  No hay productos para mostrar. Agrega productos en el módulo Productos para imprimir por lote.
+                </div>
+              ) : (
+                filteredProducts.map((p) => {
                 const inBatch = batchItems.find((b) => b.productId === p.id);
                 return (
                   <div key={p.id} className="py-2.5 flex items-center justify-between gap-3">
@@ -254,8 +259,9 @@ export const PrintBatchView: React.FC<PrintBatchViewProps> = ({
                     )}
                   </div>
                 );
-              })}
-            </div>
+              })
+            )}
+          </div>
           </div>
         </div>
 

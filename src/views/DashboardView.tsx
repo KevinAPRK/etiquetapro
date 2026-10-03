@@ -241,31 +241,37 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           <div className="divide-y divide-slate-800">
-            {products.slice(0, 4).map((p) => (
-              <div key={p.id} className="py-3 flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono bg-slate-800 text-indigo-300 px-2 py-0.5 rounded">
-                      {p.code}
-                    </span>
-                    <h4 className="text-sm font-semibold text-white truncate">{p.name}</h4>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
-                    <span>Venta: <strong className="text-white">{config.currency} {p.salePrice.toFixed(2)}</strong></span>
-                    <span>Mayor: <strong className="text-indigo-300">{config.currency} {p.wholesalePrice.toFixed(2)}</strong></span>
-                    <span>Stock: <strong className="text-emerald-400">{p.stock}</strong></span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => onSelectProductToPrint(p)}
-                  className="shrink-0 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Tag size={14} />
-                  Etiquetar
-                </button>
+            {products.length === 0 ? (
+              <div className="py-8 text-center text-slate-500 text-xs">
+                Aún no tienes productos registrados. Dirígete a <strong>Productos</strong> para agregar o importar tu inventario.
               </div>
-            ))}
+            ) : (
+              products.slice(0, 4).map((p) => (
+                <div key={p.id} className="py-3 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono bg-slate-800 text-indigo-300 px-2 py-0.5 rounded">
+                        {p.code}
+                      </span>
+                      <h4 className="text-sm font-semibold text-white truncate">{p.name}</h4>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
+                      <span>Venta: <strong className="text-white">{config.currency} {p.salePrice.toFixed(2)}</strong></span>
+                      <span>Mayor: <strong className="text-indigo-300">{config.currency} {p.wholesalePrice.toFixed(2)}</strong></span>
+                      <span>Stock: <strong className="text-emerald-400">{p.stock}</strong></span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => onSelectProductToPrint(p)}
+                    className="shrink-0 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Tag size={14} />
+                    Etiquetar
+                  </button>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

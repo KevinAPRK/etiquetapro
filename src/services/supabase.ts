@@ -115,6 +115,12 @@ export const SupabaseService = {
     return !error;
   },
 
+  async deleteTemplate(id: string): Promise<boolean> {
+    if (!supabase) return false;
+    const { error } = await supabase.from('templates').delete().eq('id', id);
+    return !error;
+  },
+
   // CONFIGURACIÓN Y LOGOTIPO
   async getConfig(): Promise<AppConfig | null> {
     if (!supabase) return null;

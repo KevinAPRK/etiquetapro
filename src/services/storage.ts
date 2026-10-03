@@ -1,5 +1,5 @@
 import { Product, LabelTemplate, PrintHistoryItem, AppConfig } from '../types';
-import { SupabaseService } from './supabase';
+import { SupabaseService, supabase } from './supabase';
 
 const STORAGE_KEYS = {
   PRODUCTS: 'etiquetapro_products_v1',
@@ -20,70 +20,143 @@ export const DEFAULT_CONFIG: AppConfig = {
   measurementUnit: 'mm',
 };
 
-export const INITIAL_PRODUCTS: Product[] = [
-  {
-    id: 'P001',
-    code: '775123456789',
-    name: 'Audífonos Bluetooth Pro TWS',
-    category: 'Tecnología',
-    brand: 'SoundWave',
-    costPrice: 28.00,
-    salePrice: 49.90,
-    wholesalePrice: 42.00,
-    wholesaleMinQty: 6,
-    stock: 45,
-    description: 'Cancelación de ruido, estuche de carga 300mAh, bluetooth 5.3',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'P002',
-    code: '775987654321',
-    name: 'Cable USB-C Carga Rápida 65W',
-    category: 'Accesorios',
-    brand: 'PowerLink',
-    costPrice: 6.50,
-    salePrice: 19.90,
-    wholesalePrice: 14.50,
-    wholesaleMinQty: 12,
-    stock: 120,
-    description: 'Cable reforzado trenzado 1.5m con chip E-marker',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'P003',
-    code: '775456789123',
-    name: 'Botella Térmica Inox 750ml',
-    category: 'Hogar & Bazar',
-    brand: 'HydroCool',
-    costPrice: 15.00,
-    salePrice: 35.00,
-    wholesalePrice: 28.00,
-    wholesaleMinQty: 10,
-    stock: 28,
-    description: 'Mantiene frío 24h y caliente 12h, libre de BPA',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'P004',
-    code: '775321654987',
-    name: 'Polo Algodón Pima Cuello Redondo',
-    category: 'Textil & Moda',
-    brand: 'UrbanCotton',
-    costPrice: 22.00,
-    salePrice: 55.00,
-    wholesalePrice: 45.00,
-    wholesaleMinQty: 6,
-    stock: 80,
-    description: '100% Algodón Pima reactivo, acabado suave',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }
-];
+export const INITIAL_PRODUCTS: Product[] = [];
 
 export const INITIAL_TEMPLATES: LabelTemplate[] = [
+  {
+    id: 'tpl-micro-20x10',
+    name: 'Micro Etiqueta (20x10mm / 2x1cm)',
+    description: 'Etiqueta compacta ultra pequeña para joyería, cables, componentes o cosméticos.',
+    widthMm: 20,
+    heightMm: 10,
+    orientation: 'landscape',
+    category: 'micro',
+    isPreset: true,
+    createdAt: new Date().toISOString(),
+    elements: [
+      {
+        id: 'el-micro-1',
+        type: 'text',
+        x: 0.5,
+        y: 0.5,
+        width: 19,
+        height: 3,
+        content: '{{nombre}}',
+        fontSize: 5,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        color: '#000000',
+      },
+      {
+        id: 'el-micro-2',
+        type: 'barcode',
+        x: 1,
+        y: 3.5,
+        width: 18,
+        height: 4,
+        content: '{{codigo}}',
+        barcodeFormat: 'CODE128',
+        showBarcodeValue: false,
+        textAlign: 'center',
+      },
+      {
+        id: 'el-micro-3',
+        type: 'price',
+        x: 0.5,
+        y: 7.5,
+        width: 19,
+        height: 2.2,
+        content: '{{precio}}',
+        fontSize: 6,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        color: '#000000',
+      },
+    ],
+  },
+  {
+    id: 'tpl-micro-10x10',
+    name: 'Micro Cuadrada (10x10mm / 1x1cm)',
+    description: 'Etiqueta miniatura para anillos, aretes, códigos QR o chips.',
+    widthMm: 10,
+    heightMm: 10,
+    orientation: 'landscape',
+    category: 'micro',
+    isPreset: true,
+    createdAt: new Date().toISOString(),
+    elements: [
+      {
+        id: 'el-m10-1',
+        type: 'qrcode',
+        x: 1,
+        y: 0.8,
+        width: 8,
+        height: 6.5,
+        content: '{{codigo}}',
+      },
+      {
+        id: 'el-m10-2',
+        type: 'price',
+        x: 0.5,
+        y: 7.5,
+        width: 9,
+        height: 2.2,
+        content: '{{precio}}',
+        fontSize: 5,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        color: '#000000',
+      },
+    ],
+  },
+  {
+    id: 'tpl-micro-20x10-qr',
+    name: 'Micro QR + Código (20x10mm)',
+    description: 'Código QR lateral con nombre y precio al costado.',
+    widthMm: 20,
+    heightMm: 10,
+    orientation: 'landscape',
+    category: 'micro',
+    isPreset: true,
+    createdAt: new Date().toISOString(),
+    elements: [
+      {
+        id: 'el-mqr-1',
+        type: 'qrcode',
+        x: 0.8,
+        y: 1,
+        width: 8,
+        height: 8,
+        content: '{{codigo}}',
+      },
+      {
+        id: 'el-mqr-2',
+        type: 'text',
+        x: 9.5,
+        y: 0.8,
+        width: 10,
+        height: 4.2,
+        content: '{{nombre}}',
+        fontSize: 5,
+        fontWeight: 'bold',
+        textAlign: 'left',
+        color: '#000000',
+      },
+      {
+        id: 'el-mqr-3',
+        type: 'price',
+        x: 9.5,
+        y: 5.5,
+        width: 10,
+        height: 3.8,
+        content: '{{precio}}',
+        fontSize: 6,
+        fontWeight: 'bold',
+        textAlign: 'left',
+        color: '#000000',
+      },
+    ],
+  },
   {
     id: 'tpl-tienda-50x30',
     name: 'Tienda Minorista (50x30mm)',
@@ -132,8 +205,8 @@ export const INITIAL_TEMPLATES: LabelTemplate[] = [
         fontWeight: 'bold',
         textAlign: 'center',
         color: '#000000',
-      }
-    ]
+      },
+    ],
   },
   {
     id: 'tpl-mayorista-60x40',
@@ -233,8 +306,8 @@ export const INITIAL_TEMPLATES: LabelTemplate[] = [
         barcodeFormat: 'CODE128',
         showBarcodeValue: true,
         textAlign: 'center',
-      }
-    ]
+      },
+    ],
   },
   {
     id: 'tpl-minimal-qr-40x25',
@@ -290,8 +363,8 @@ export const INITIAL_TEMPLATES: LabelTemplate[] = [
         content: 'COD: {{codigo}}',
         fontSize: 6,
         textAlign: 'center',
-      }
-    ]
+      },
+    ],
   },
   {
     id: 'tpl-gondola-80x30',
@@ -375,9 +448,9 @@ export const INITIAL_TEMPLATES: LabelTemplate[] = [
         fontWeight: 'bold',
         textAlign: 'center',
         color: '#000000',
-      }
-    ]
-  }
+      },
+    ],
+  },
 ];
 
 // Helper LocalStorage API con Sincronización en Red Local
@@ -394,7 +467,7 @@ export const StorageService = {
         ]);
 
         const result: { products?: Product[]; templates?: LabelTemplate[]; config?: AppConfig } = {};
-        if (cloudProducts && cloudProducts.length > 0) {
+        if (cloudProducts !== null) {
           localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(cloudProducts));
           result.products = cloudProducts;
         }
@@ -519,6 +592,18 @@ export const StorageService = {
     return products;
   },
 
+  clearAllProducts(): Product[] {
+    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify([]));
+
+    if (SupabaseService.isConfigured() && supabase) {
+      Promise.resolve(supabase.from('products').delete().neq('id', 'NONE')).catch(() => {});
+    }
+
+    fetch('/api/products/clear', { method: 'POST' }).catch(() => {});
+
+    return [];
+  },
+
   // TEMPLATES
   getTemplates(): LabelTemplate[] {
     const raw = localStorage.getItem(STORAGE_KEYS.TEMPLATES);
@@ -569,7 +654,7 @@ export const StorageService = {
     localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(templates));
 
     if (SupabaseService.isConfigured()) {
-      // Si la tabla templates existe en Supabase
+      SupabaseService.deleteTemplate(id).catch(() => {});
     }
 
     fetch(`/api/templates/${id}`, { method: 'DELETE' }).catch(() => {});

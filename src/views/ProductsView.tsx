@@ -22,6 +22,7 @@ interface ProductsViewProps {
   config: AppConfig;
   onSaveProduct: (product: Product) => void;
   onDeleteProduct: (id: string) => void;
+  onClearAllProducts?: () => void;
   onPrintProduct: (product: Product) => void;
   onBulkImport: (products: Product[]) => void;
 }
@@ -31,6 +32,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
   config,
   onSaveProduct,
   onDeleteProduct,
+  onClearAllProducts,
   onPrintProduct,
   onBulkImport,
 }) => {
@@ -220,6 +222,19 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
           >
             <Download size={15} /> Exportar Excel
           </button>
+          {products.length > 0 && onClearAllProducts && (
+            <button
+              onClick={() => {
+                if (confirm('¿Estás seguro de eliminar TODOS los productos del catálogo? Esta acción no se puede deshacer.')) {
+                  onClearAllProducts();
+                }
+              }}
+              className="px-3.5 py-2 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white text-xs font-semibold border border-rose-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Eliminar todos los productos de la base de datos"
+            >
+              <Trash2 size={15} /> Vaciar Catálogo
+            </button>
+          )}
           <button
             onClick={handleOpenCreateModal}
             className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center gap-1.5 transition-all cursor-pointer"

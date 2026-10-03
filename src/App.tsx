@@ -32,7 +32,7 @@ export function App() {
     // Intentar sincronización centralizada si el cliente se conecta desde celular o red
     StorageService.syncWithServer().then((serverData) => {
       if (serverData) {
-        if (serverData.products && serverData.products.length > 0) {
+        if (serverData.products !== undefined) {
           setProducts(serverData.products);
         }
 
@@ -71,6 +71,11 @@ export function App() {
 
   const handleDeleteProduct = (id: string) => {
     const updated = StorageService.deleteProduct(id);
+    setProducts([...updated]);
+  };
+
+  const handleClearAllProducts = () => {
+    const updated = StorageService.clearAllProducts();
     setProducts([...updated]);
   };
 
@@ -176,6 +181,7 @@ export function App() {
             config={config}
             onSaveProduct={handleSaveProduct}
             onDeleteProduct={handleDeleteProduct}
+            onClearAllProducts={handleClearAllProducts}
             onPrintProduct={handlePrintProduct}
             onBulkImport={handleBulkImportProducts}
           />
