@@ -20,7 +20,8 @@ import {
   Sparkles,
   Download,
   FolderOpen,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Check
 } from 'lucide-react';
 import { LabelTemplate, LabelElement, Product, AppConfig, ElementType } from '../types';
 import { LabelRenderer } from '../components/LabelRenderer';
@@ -117,6 +118,7 @@ export const DesignerView: React.FC<DesignerViewProps> = ({
 
   const [zoomScale, setZoomScale] = useState<number>(4.0); // 1mm = 4px en pantalla
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [blackenedFeedback, setBlackenedFeedback] = useState(false);
 
   const selectedElement = template.elements.find((el) => el.id === selectedElementId) || null;
 
@@ -301,6 +303,111 @@ export const DesignerView: React.FC<DesignerViewProps> = ({
       showBarcodeValue: true,
     };
     handleUpdateSelected(converted);
+  };
+
+  // Convertir una imagen (dibujo, logo, firma) a tinta negra pura para impresión térmica
+  const convertImageToPureBlack = (imageSrc: string): Promise<string> => {
+    return new Promise((resolve) => {
+      try {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth || img.width || 300;
+            canvas.height = img.naturalHeight || img.height || 300;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return resolve(imageSrc);
+
+            ctx.drawImage(img, 0, 0);
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imgData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+              const r = data[i];
+              const g = data[i + 1];
+              const b = data[i + 2];
+              const a = data[i + 3];
+
+              // Si el píxel tiene opacidad visible
+              if (a > 20) {
+                const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+                // Si no es fondo blanco/muy claro (umbral 235), convertir a negro puro sólido
+                if (luminance < 235) {
+                  data[i] = 0;       // R
+                  data[i + 1] = 0;   // G
+                  data[i + 2] = 0;   // B
+                  data[i + 3] = 255; // Opaco sólido
+                } else {
+                  // Fondo blanco pasa a transparente para no tapar elementos
+                  data[i] = 255;
+                  data[i + 1] = 255;
+                  data[i + 2] = 255;
+                  data[i + 3] = 0;
+                }
+              }
+            }
+
+            ctx.putImageData(imgData, 0, 0);
+            resolve(canvas.toDataURL('image/png'));
+          } catch (e) {
+            console.warn('Canvas conversion error:', e);
+            resolve(imageSrc);
+          }
+        };
+        img.onerror = () => resolve(imageSrc);
+        img.src = imageSrc;
+      } catch {
+        resolve(imageSrc);
+      }
+    });
+  };
+
+  // Volver elemento seleccionado a Negro Puro (#000000)
+  const handleMakePureBlack = async () => {
+    if (!selectedElement) return;
+
+    if (selectedElement.type === 'image') {
+      const src = selectedElement.content || config.businessLogo;
+      if (src) {
+        const blackened = await convertImageToPureBlack(src);
+        handleUpdateSelected({ content: blackened });
+      }
+    } else if (selectedElement.type === 'line' || selectedElement.type === 'rect') {
+      handleUpdateSelected({
+        borderColor: '#000000',
+        color: '#000000',
+      });
+    } else {
+      // text, price, barcode, qrcode
+      handleUpdateSelected({ color: '#000000' });
+    }
+
+    setBlackenedFeedback(true);
+    setTimeout(() => setBlackenedFeedback(false), 2000);
+  };
+
+  // Volver todos los elementos de la plantilla a Negro Puro
+  const handleMakeAllPureBlack = async () => {
+    const updated = await Promise.all(
+      template.elements.map(async (el) => {
+        if (el.type === 'image') {
+          const src = el.content || config.businessLogo;
+          if (src) {
+            const blackened = await convertImageToPureBlack(src);
+            return { ...el, content: blackened };
+          }
+          return el;
+        }
+        if (el.type === 'line' || el.type === 'rect') {
+          return { ...el, borderColor: '#000000', color: '#000000' };
+        }
+        return { ...el, color: '#000000' };
+      })
+    );
+    setTemplate((prev) => ({ ...prev, elements: updated }));
+    setBlackenedFeedback(true);
+    setTimeout(() => setBlackenedFeedback(false), 2000);
   };
 
   // Guardar plantilla
@@ -529,9 +636,29 @@ export const DesignerView: React.FC<DesignerViewProps> = ({
             backgroundSize: '20px 20px',
           }}
         >
-          {/* Reglas o dimensiones visibles */}
-          <div className="absolute top-3 left-4 text-xs font-mono text-slate-500 bg-slate-900/80 px-2 py-1 rounded border border-slate-800">
-            Lienzo: {template.widthMm}mm × {template.heightMm}mm | Elementos: {template.elements.length}
+          {/* Reglas o dimensiones visibles y botón Todo a Negro */}
+          <div className="absolute top-3 left-4 flex items-center gap-2 z-10">
+            <div className="text-xs font-mono text-slate-500 bg-slate-900/80 px-2 py-1 rounded border border-slate-800">
+              Lienzo: {template.widthMm}mm × {template.heightMm}mm | Elementos: {template.elements.length}
+            </div>
+            <button
+              type="button"
+              onClick={handleMakeAllPureBlack}
+              className="text-xs text-slate-300 hover:text-white bg-slate-900/90 hover:bg-black px-2.5 py-1 rounded border border-slate-800 hover:border-slate-700 flex items-center gap-1.5 cursor-pointer transition-all shadow-sm"
+              title="Convertir todos los textos, códigos, marcos y dibujos de la plantilla a negro puro (#000000)"
+            >
+              {blackenedFeedback ? (
+                <>
+                  <Check size={12} className="text-emerald-400" />
+                  <span className="text-emerald-300 font-semibold">¡Todo a Negro!</span>
+                </>
+              ) : (
+                <>
+                  <span className="w-2.5 h-2.5 rounded-full bg-black border border-white inline-block"></span>
+                  <span>Todo a Negro Puro</span>
+                </>
+              )}
+            </button>
           </div>
 
           {/* Lienzo renderizado editable */}
@@ -583,6 +710,27 @@ export const DesignerView: React.FC<DesignerViewProps> = ({
                       <ArrowRightLeft size={12} /> Convertir a Barras
                     </button>
                   )}
+                  <button
+                    onClick={handleMakePureBlack}
+                    className="p-1.5 rounded-lg bg-black hover:bg-neutral-800 text-white border border-slate-700 cursor-pointer flex items-center gap-1.5 text-[10px] font-semibold px-2 shadow-sm transition-all"
+                    title={
+                      selectedElement.type === 'image'
+                        ? 'Convertir este dibujo o logo a tinta negra pura térmica'
+                        : 'Volver este texto o elemento a negro puro (#000000)'
+                    }
+                  >
+                    {blackenedFeedback ? (
+                      <>
+                        <Check size={12} className="text-emerald-400" />
+                        <span className="text-emerald-300">¡Negro!</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="w-2 h-2 rounded-full bg-white ring-1 ring-slate-400 inline-block"></span>
+                        <span>Volver Negro</span>
+                      </>
+                    )}
+                  </button>
                   <button
                     onClick={handleDuplicateSelected}
                     className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white cursor-pointer"
@@ -684,14 +832,70 @@ export const DesignerView: React.FC<DesignerViewProps> = ({
 
               {/* Subir imagen si es tipo image */}
               {selectedElement.type === 'image' && (
-                <div>
-                  <label className="text-slate-400 text-[11px] block mb-1">Subir Logo / Imagen</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="w-full text-xs text-slate-300 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-indigo-600 file:text-white cursor-pointer"
-                  />
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-slate-400 text-[11px] block mb-1">Subir Logo / Dibujo</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="w-full text-xs text-slate-300 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-indigo-600 file:text-white cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Herramienta Térmica: Volver Dibujo a Negro Puro */}
+                  <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-2">
+                    <span className="text-[11px] font-bold text-slate-200 block">
+                      Optimizador Térmico para Dibujos / Logos
+                    </span>
+                    <p className="text-[10px] text-slate-400 leading-tight">
+                      Convierte cualquier logo, dibujo a mano o firma de color a <b>tinta negra pura (#000000)</b> con fondo transparente para que imprima con máxima definición en impresoras térmicas.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleMakePureBlack}
+                      className="w-full py-2 px-3 rounded-lg bg-black hover:bg-neutral-850 text-white border border-slate-700 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer shadow transition-all"
+                    >
+                      {blackenedFeedback ? (
+                        <>
+                          <Check size={14} className="text-emerald-400" />
+                          <span className="text-emerald-300">¡Dibujo Convertido a Negro Puro!</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="w-2.5 h-2.5 rounded-full bg-white ring-2 ring-black inline-block"></span>
+                          <span>Volver Dibujo a Negro Puro</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Propiedades de Línea o Marco */}
+              {(selectedElement.type === 'line' || selectedElement.type === 'rect') && (
+                <div className="space-y-2">
+                  <div>
+                    <label className="text-slate-400 text-[11px] block">Grosor de Trazo (px)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={selectedElement.borderWidth || 1}
+                      onChange={(e) =>
+                        handleUpdateSelected({ borderWidth: parseInt(e.target.value) || 1 })
+                      }
+                      className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white text-xs"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleMakePureBlack}
+                    className="w-full py-1.5 px-3 rounded-lg bg-black hover:bg-neutral-850 text-white border border-slate-700 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer shadow transition-all"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-white inline-block"></span>
+                    <span>Volver Trazo a Negro Puro</span>
+                  </button>
                 </div>
               )}
 
@@ -817,21 +1021,84 @@ export const DesignerView: React.FC<DesignerViewProps> = ({
                 </div>
               )}
 
-              {/* Color */}
-              <div>
-                <label className="text-slate-400 text-[11px] block mb-1">Color</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={selectedElement.color || '#000000'}
-                    onChange={(e) => handleUpdateSelected({ color: e.target.value })}
-                    className="w-8 h-8 rounded border border-slate-700 cursor-pointer bg-transparent"
-                  />
-                  <span className="text-xs font-mono text-slate-300">
-                    {selectedElement.color || '#000000'}
-                  </span>
+              {/* Color y Negro Puro */}
+              {selectedElement.type !== 'image' && (
+                <div className="space-y-2 pt-2 border-t border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <label className="text-slate-400 text-[11px] font-semibold">
+                      Color / Tinta
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleMakePureBlack}
+                      className="px-2 py-1 rounded bg-black hover:bg-neutral-850 text-white border border-slate-700 text-[10px] font-semibold flex items-center gap-1.5 cursor-pointer transition-all shadow-sm"
+                      title="Volver letra, código o trazo inmediatamente a negro puro (#000000)"
+                    >
+                      {blackenedFeedback ? (
+                        <>
+                          <Check size={12} className="text-emerald-400" />
+                          <span className="text-emerald-300">¡Listo en Negro!</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="w-2 h-2 rounded-full bg-white ring-1 ring-slate-400 inline-block"></span>
+                          <span>Volver a Negro Puro</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={selectedElement.color || selectedElement.borderColor || '#000000'}
+                      onChange={(e) =>
+                        handleUpdateSelected({
+                          color: e.target.value,
+                          borderColor: e.target.value,
+                        })
+                      }
+                      className="w-8 h-8 rounded border border-slate-700 cursor-pointer bg-transparent"
+                    />
+                    <span className="text-xs font-mono text-slate-300">
+                      {selectedElement.color || selectedElement.borderColor || '#000000'}
+                    </span>
+                    <div className="flex items-center gap-1.5 ml-auto">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleUpdateSelected({ color: '#000000', borderColor: '#000000' })
+                        }
+                        className="w-6 h-6 rounded-full bg-black border border-slate-500 hover:scale-110 transition-transform cursor-pointer shadow-sm"
+                        title="Negro Puro (#000000)"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleUpdateSelected({ color: '#333333', borderColor: '#333333' })
+                        }
+                        className="w-6 h-6 rounded-full bg-neutral-700 border border-slate-500 hover:scale-110 transition-transform cursor-pointer shadow-sm"
+                        title="Gris Oscuro (#333333)"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleUpdateSelected({ color: '#2563eb', borderColor: '#2563eb' })
+                        }
+                        className="w-6 h-6 rounded-full bg-blue-600 border border-slate-500 hover:scale-110 transition-transform cursor-pointer shadow-sm"
+                        title="Azul (#2563eb)"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleUpdateSelected({ color: '#dc2626', borderColor: '#dc2626' })
+                        }
+                        className="w-6 h-6 rounded-full bg-red-600 border border-slate-500 hover:scale-110 transition-transform cursor-pointer shadow-sm"
+                        title="Rojo (#dc2626)"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-4 text-slate-400">

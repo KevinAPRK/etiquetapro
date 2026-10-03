@@ -262,7 +262,7 @@ const ElementItem: React.FC<ElementItemProps> = ({
           style={{
             width: '100%',
             height: `${element.borderWidth || 1}px`,
-            backgroundColor: element.borderColor || '#000000',
+            backgroundColor: element.borderColor || element.color || '#000000',
           }}
         />
       )}
@@ -274,7 +274,7 @@ const ElementItem: React.FC<ElementItemProps> = ({
             width: '100%',
             height: '100%',
             backgroundColor: element.backgroundColor || 'transparent',
-            border: `${element.borderWidth || 1}px solid ${element.borderColor || '#000000'}`,
+            border: `${element.borderWidth || 1}px solid ${element.borderColor || element.color || '#000000'}`,
             borderRadius: '2px',
           }}
         />
