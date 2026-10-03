@@ -8,7 +8,8 @@ import {
   Sliders, 
   Sparkles,
   Search,
-  Check
+  Check,
+  Grid
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -37,6 +38,11 @@ export const PrintBatchView: React.FC<PrintBatchViewProps> = ({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(templates[0]?.id || '');
   const [selectedPrinter, setSelectedPrinter] = useState<string>(config.defaultPrinter);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [printMode, setPrintMode] = useState<'sheet' | 'thermal'>('sheet');
+  const [paperSize, setPaperSize] = useState<'a4' | 'letter'>('a4');
+  const [marginMm, setMarginMm] = useState<number>(5);
+  const [gapMm, setGapMm] = useState<number>(2);
+  const [showCutGuides, setShowCutGuides] = useState<boolean>(true);
   const [batchItems, setBatchItems] = useState<BatchItem[]>(
     products.slice(0, 3).map((p) => ({ productId: p.id, quantity: 10 }))
   );
@@ -67,6 +73,25 @@ export const PrintBatchView: React.FC<PrintBatchViewProps> = ({
       p.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Dimensiones del papel para distribución
+  const paperDimensions: Record<'a4' | 'letter', { width: number; height: number; name: string }> = {
+    a4: { width: 210, height: 297, name: 'A4' },
+    letter: { width: 215.9, height: 279.4, name: 'Carta' },
+  };
+
+  const currentSheet = paperDimensions[paperSize] || paperDimensions.a4;
+  const labelW = selectedTemplate ? selectedTemplate.widthMm : 50;
+  const labelH = selectedTemplate ? selectedTemplate.heightMm : 30;
+
+  const usableW = Math.max(10, currentSheet.width - 2 * marginMm);
+  const usableH = Math.max(10, currentSheet.height - 2 * marginMm);
+
+  const autoColumns = Math.max(1, Math.floor((usableW + gapMm) / (labelW + gapMm)));
+  const autoRows = Math.max(1, Math.floor((usableH + gapMm) / (labelH + gapMm)));
+  const labelsPerSheet = autoColumns * autoRows;
+  const totalSheetsNeeded = Math.ceil(totalLabels / labelsPerSheet);
+  const savedSheets = Math.max(0, totalLabels - totalSheetsNeeded);
+
   const handlePrintBatch = () => {
     if (batchItems.length === 0 || !selectedTemplate) {
       alert('Selecciona al menos un producto para imprimir.');
@@ -79,20 +104,92 @@ export const PrintBatchView: React.FC<PrintBatchViewProps> = ({
       return;
     }
 
-    let allPagesHtml = '';
+    const allLabels: string[] = [];
     batchItems.forEach((item) => {
       const prod = products.find((p) => p.id === item.productId);
       if (!prod) return;
       const el = document.getElementById(`batch-preview-${prod.id}`);
       const content = el?.innerHTML || '';
       for (let i = 0; i < item.quantity; i++) {
-        allPagesHtml += `
-          <div class="page" style="page-break-after: always; display: flex; align-items: center; justify-content: center; width: ${selectedTemplate.widthMm}mm; height: ${selectedTemplate.heightMm}mm;">
-            ${content}
+        allLabels.push(content);
+      }
+    });
+
+    let contentHtml = '';
+    if (printMode === 'thermal') {
+      for (let i = 0; i < allLabels.length; i++) {
+        const isLast = i === allLabels.length - 1;
+        contentHtml += `
+          <div class="thermal-label-page" style="
+            width: ${selectedTemplate.widthMm}mm;
+            height: ${selectedTemplate.heightMm}mm;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            box-sizing: border-box;
+            ${!isLast ? 'page-break-after: always; break-after: page;' : 'page-break-after: auto; break-after: auto;'}
+          ">
+            <div style="width: ${selectedTemplate.widthMm}mm; height: ${selectedTemplate.heightMm}mm; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+              ${allLabels[i]}
+            </div>
           </div>
         `;
       }
-    });
+    } else {
+      // Modo distribución inteligente en Hoja A4 / Carta
+      let labelsRemaining = allLabels.length;
+      let currentIndex = 0;
+
+      while (labelsRemaining > 0) {
+        const labelsInThisSheet = Math.min(labelsRemaining, labelsPerSheet);
+        const isLastSheet = labelsRemaining <= labelsPerSheet;
+
+        let sheetLabelsHtml = '';
+        for (let l = 0; l < labelsInThisSheet; l++) {
+          sheetLabelsHtml += `
+            <div class="sheet-label-item" style="
+              width: ${labelW}mm;
+              height: ${labelH}mm;
+              box-sizing: border-box;
+              overflow: hidden;
+              position: relative;
+              ${showCutGuides ? 'border: 0.5px dashed #cbd5e1;' : ''}
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            ">
+              <div style="width: ${labelW}mm; height: ${labelH}mm; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                ${allLabels[currentIndex + l]}
+              </div>
+            </div>
+          `;
+        }
+
+        contentHtml += `
+          <div class="sheet-page" style="
+            width: ${currentSheet.width}mm;
+            height: ${currentSheet.height}mm;
+            padding: ${marginMm}mm;
+            box-sizing: border-box;
+            overflow: hidden;
+            background: #ffffff;
+            display: grid;
+            grid-template-columns: repeat(${autoColumns}, ${labelW}mm);
+            grid-template-rows: repeat(${autoRows}, ${labelH}mm);
+            gap: ${gapMm}mm;
+            justify-content: start;
+            align-content: start;
+            ${!isLastSheet ? 'page-break-after: always; break-after: page;' : 'page-break-after: auto; break-after: auto;'}
+          ">
+            ${sheetLabelsHtml}
+          </div>
+        `;
+
+        currentIndex += labelsInThisSheet;
+        labelsRemaining -= labelsInThisSheet;
+      }
+    }
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -101,20 +198,43 @@ export const PrintBatchView: React.FC<PrintBatchViewProps> = ({
           <title>Impresión en Lote - ${selectedTemplate.name}</title>
           <style>
             @page {
-              size: ${selectedTemplate.widthMm}mm ${selectedTemplate.heightMm}mm;
+              size: ${printMode === 'thermal' ? `${selectedTemplate.widthMm}mm ${selectedTemplate.heightMm}mm` : `${paperSize} portrait`};
               margin: 0;
             }
-            body { margin: 0; padding: 0; background: #fff; }
-            .label-box { box-shadow: none !important; border: none !important; }
+            * {
+              box-sizing: border-box;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+              background: #fff;
+              font-family: Arial, sans-serif;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .label-box {
+              box-shadow: none !important;
+              border: none !important;
+              width: ${selectedTemplate.widthMm}mm !important;
+              height: ${selectedTemplate.heightMm}mm !important;
+            }
+            .sheet-page {
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+            .sheet-label-item {
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
           </style>
         </head>
         <body>
-          ${allPagesHtml}
+          ${contentHtml}
           <script>
             window.onload = function() {
               window.focus();
               window.print();
-              setTimeout(function() { window.close(); }, 500);
+              setTimeout(function() { window.close(); }, 700);
             };
           </script>
         </body>
@@ -127,7 +247,9 @@ export const PrintBatchView: React.FC<PrintBatchViewProps> = ({
       productCode: 'LOTE-VARIOS',
       templateName: selectedTemplate.name,
       quantity: totalLabels,
-      dimensions: `${selectedTemplate.widthMm}x${selectedTemplate.heightMm}mm`,
+      dimensions: printMode === 'sheet'
+        ? `${currentSheet.name} (${autoColumns}x${autoRows}=${labelsPerSheet}/hoja)`
+        : `${selectedTemplate.widthMm}x${selectedTemplate.heightMm}mm (Térmica)`,
       status: 'completado',
     });
 
@@ -167,11 +289,13 @@ export const PrintBatchView: React.FC<PrintBatchViewProps> = ({
                   onChange={(e) => setSelectedPrinter(e.target.value)}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
                 >
+                  <option value="Canon G3070 / Inyección A4">Canon G3070 / Inyección A4</option>
+                  <option value="Epson EcoTank / Serie L (A4)">Epson EcoTank (A4)</option>
+                  <option value="HP DeskJet / LaserJet (A4)">HP DeskJet / LaserJet (A4)</option>
                   <option value="Zebra GK420 / ZD Series">Zebra GK420 / ZD Series</option>
                   <option value="TSC TE200 / DA210">TSC TE200 / DA210</option>
                   <option value="Brother QL Series">Brother QL Series</option>
                   <option value="Xprinter XP-420B">Xprinter XP-420B</option>
-                  <option value="Epson TM-T20 / TM Series">Epson TM Series</option>
                   <option value="Impresora Estándar Windows">Impresora Estándar Windows</option>
                 </select>
               </div>
@@ -192,6 +316,103 @@ export const PrintBatchView: React.FC<PrintBatchViewProps> = ({
                   ))}
                 </select>
               </div>
+            </div>
+
+            {/* Modo de Impresión para Lote */}
+            <div className="pt-2 border-t border-slate-800 space-y-3">
+              <label className="block text-xs font-semibold text-slate-300">
+                Modo de Salida
+              </label>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPrintMode('sheet')}
+                  className={`p-2.5 rounded-xl border text-xs font-medium text-left flex items-center gap-2.5 transition-all cursor-pointer ${
+                    printMode === 'sheet'
+                      ? 'bg-indigo-600/20 border-indigo-500 text-white shadow'
+                      : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Layers size={18} className={printMode === 'sheet' ? 'text-indigo-400' : ''} />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold flex items-center gap-1.5">
+                      Hoja A4 / Carta
+                      <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded font-semibold">
+                        Ahorro
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      Para Canon, Epson, HP. Agrupa el lote en hojas.
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPrintMode('thermal')}
+                  className={`p-2.5 rounded-xl border text-xs font-medium text-left flex items-center gap-2.5 transition-all cursor-pointer ${
+                    printMode === 'thermal'
+                      ? 'bg-indigo-600/20 border-indigo-500 text-white shadow'
+                      : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Printer size={18} className={printMode === 'thermal' ? 'text-indigo-400' : ''} />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold">Rollo Térmico (1x1)</div>
+                    <div className="text-[10px] text-slate-400">Zebra, TSC, Brother</div>
+                  </div>
+                </button>
+              </div>
+
+              {printMode === 'sheet' && (
+                <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl space-y-2.5">
+                  <div className="grid grid-cols-3 gap-2.5 text-xs">
+                    <div>
+                      <label className="text-slate-400 text-[11px] block mb-1">Papel</label>
+                      <select
+                        value={paperSize}
+                        onChange={(e) => setPaperSize(e.target.value as any)}
+                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white"
+                      >
+                        <option value="a4">A4 (210×297)</option>
+                        <option value="letter">Carta</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-slate-400 text-[11px] block mb-1">Margen (mm)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="20"
+                        value={marginMm}
+                        onChange={(e) => setMarginMm(Math.max(0, parseInt(e.target.value) || 0))}
+                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white text-center"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-slate-400 text-[11px] block mb-1">Espacio (mm)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="15"
+                        value={gapMm}
+                        onChange={(e) => setGapMm(Math.max(0, parseInt(e.target.value) || 0))}
+                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white text-center"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-emerald-950/40 border border-emerald-800/40 text-xs text-emerald-300 flex items-center justify-between">
+                    <span>
+                      📐 <strong>{labelsPerSheet} etiquetas</strong> por hoja {currentSheet.name} ({autoColumns}x{autoRows})
+                    </span>
+                    <span className="font-semibold text-emerald-400">
+                      Total: {totalSheetsNeeded} hoja(s)
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -304,7 +525,7 @@ export const PrintBatchView: React.FC<PrintBatchViewProps> = ({
                       template={selectedTemplate}
                       product={p}
                       config={config}
-                      scale={3.5}
+                      scale={3.78}
                     />
                   </div>
                 );
